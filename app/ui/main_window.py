@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QProgressBar,
     QPushButton,
     QSizePolicy,
     QTextEdit,
@@ -61,6 +62,13 @@ class MainWindow(QMainWindow):
         self._status_label = QLabel("待機中")
         root.addWidget(self._status_label)
 
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setRange(0, 1000)
+        self._progress_bar.setValue(0)
+        self._progress_bar.setTextVisible(False)
+        self._progress_bar.setVisible(False)
+        root.addWidget(self._progress_bar)
+
         self._log_view = QTextEdit()
         self._log_view.setReadOnly(True)
         self._log_view.setMinimumHeight(200)
@@ -98,15 +106,23 @@ class MainWindow(QMainWindow):
 
     def _start_processing(self, files: list[Path], language: str, model: str) -> None:
         self._processing = True
+        self._progress_bar.setValue(0)
+        self._progress_bar.setVisible(True)
         self._status_label.setText(f"{len(files)}件中 1件目を処理中")
         self._worker = TranscriptionWorker(files, language, model)
         self._worker.log_message.connect(self._append_log)
         self._worker.status_update.connect(self._status_label.setText)
+        self._worker.progress.connect(self._on_progress)
         self._worker.finished.connect(self._on_finished)
         self._worker.start()
 
+    def _on_progress(self, overall_percent: float) -> None:
+        self._progress_bar.setValue(int(overall_percent * 10))
+
     def _on_finished(self, had_errors: bool) -> None:
         self._processing = False
+        self._progress_bar.setValue(1000)
+        self._progress_bar.setVisible(False)
         self._status_label.setText("エラーあり" if had_errors else "完了")
 
     def _append_log(self, level: str, message: str) -> None:
