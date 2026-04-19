@@ -76,6 +76,8 @@ def transcribe(
             _tqdm_module.tqdm = original_tqdm_cls
 
     segments = normalize_segments(result, kept_intervals)
+    from app.services.segment_merger import merge_by_conversation
+    segments = merge_by_conversation(segments, language=language)
     return TranscriptionResult(
         source_path=source_path,
         language=language,
