@@ -6,15 +6,11 @@
       <stop offset="50%" stop-color="#6C5CE7"/>
       <stop offset="100%" stop-color="#9B59F6"/>
     </linearGradient>
-    <linearGradient id="wave" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.85"/>
-    </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
-      <feOffset dx="0" dy="6" result="offsetblur"/>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
       <feComponentTransfer>
-        <feFuncA type="linear" slope="0.25"/>
+        <feFuncA type="linear" slope="0.22"/>
       </feComponentTransfer>
       <feMerge>
         <feMergeNode/>
@@ -29,21 +25,29 @@
   <!-- Subtle inner highlight -->
   <rect x="64" y="64" width="896" height="260" rx="205" ry="205" fill="#FFFFFF" opacity="0.08"/>
 
-  <!-- Waveform bars -->
-  <g fill="url(#wave)" filter="url(#shadow)">
-    <rect x="192" y="452" width="48" height="120" rx="24"/>
-    <rect x="272" y="392" width="48" height="240" rx="24"/>
-    <rect x="352" y="312" width="48" height="400" rx="24"/>
-    <rect x="432" y="232" width="48" height="560" rx="24"/>
-    <rect x="512" y="312" width="48" height="400" rx="24"/>
-    <rect x="592" y="372" width="48" height="280" rx="24"/>
-    <rect x="672" y="292" width="48" height="440" rx="24"/>
-    <rect x="752" y="412" width="48" height="200" rx="24"/>
+  <!-- Waveform (left): 5 bars centered around y=512 -->
+  <g fill="#FFFFFF" filter="url(#shadow)">
+    <rect x="118" y="432" width="36" height="160" rx="18"/>
+    <rect x="170" y="368" width="36" height="288" rx="18"/>
+    <rect x="222" y="296" width="36" height="432" rx="18"/>
+    <rect x="274" y="360" width="36" height="304" rx="18"/>
+    <rect x="326" y="424" width="36" height="176" rx="18"/>
   </g>
 
-  <!-- Transcript lines at bottom -->
-  <g fill="#FFFFFF" opacity="0.92">
-    <rect x="224" y="792" width="420" height="28" rx="14"/>
-    <rect x="224" y="844" width="576" height="28" rx="14"/>
+  <!-- Arrow (middle): waveform → MD -->
+  <g fill="#FFFFFF" opacity="0.95" filter="url(#shadow)">
+    <rect x="400" y="492" width="76" height="40" rx="10"/>
+    <path d="M 468 452 L 536 512 L 468 572 Z"/>
+  </g>
+
+  <!-- "MD" text (right) -->
+  <g filter="url(#shadow)">
+    <text x="752" y="596"
+          fill="#FFFFFF"
+          font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="220"
+          font-weight="900"
+          text-anchor="middle"
+          letter-spacing="-4">MD</text>
   </g>
 </svg>
