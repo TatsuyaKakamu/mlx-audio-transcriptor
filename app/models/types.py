@@ -7,6 +7,7 @@ class Segment:
     start_sec: float
     end_sec: float
     text: str
+    speaker_id: int | None = None
 
 
 @dataclass
@@ -15,3 +16,4 @@ class TranscriptionResult:
     language: str
     model: str
     segments: list[Segment]
+    diarization_enabled: bool = False

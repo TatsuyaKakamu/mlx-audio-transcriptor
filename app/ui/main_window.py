@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.services import notifier
+from app.services import notifier, settings
 from app.ui.drop_area import SUPPORTED_EXTENSIONS, DropArea
 from app.workers.transcription_worker import TranscriptionWorker
 
@@ -33,7 +34,10 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(str(_APP_ICON_PATH)))
         self._worker: TranscriptionWorker | None = None
         self._processing = False
+        self._settings = settings.load()
         self._setup_ui()
+        self._apply_settings_to_ui()
+        self._connect_settings_persistence()
 
     def _setup_ui(self) -> None:
         central = QWidget()
@@ -48,21 +52,24 @@ class MainWindow(QMainWindow):
         self._drop_area.files_dropped.connect(self._on_files_dropped)
         root.addWidget(self._drop_area)
 
-        settings = QHBoxLayout()
-        settings.addWidget(QLabel("言語:"))
+        settings_row = QHBoxLayout()
+        settings_row.addWidget(QLabel("言語:"))
         self._lang_combo = QComboBox()
         for label, code in _LANGUAGES:
             self._lang_combo.addItem(label, code)
-        settings.addWidget(self._lang_combo)
-        settings.addSpacing(20)
-        settings.addWidget(QLabel("モデル:"))
+        settings_row.addWidget(self._lang_combo)
+        settings_row.addSpacing(20)
+        settings_row.addWidget(QLabel("モデル:"))
         self._model_combo = QComboBox()
         for m in _MODELS:
             self._model_combo.addItem(m)
         self._model_combo.setCurrentText(_DEFAULT_MODEL)
-        settings.addWidget(self._model_combo)
-        settings.addStretch()
-        root.addLayout(settings)
+        settings_row.addWidget(self._model_combo)
+        settings_row.addSpacing(20)
+        self._diarization_check = QCheckBox("話者識別")
+        settings_row.addWidget(self._diarization_check)
+        settings_row.addStretch()
+        root.addLayout(settings_row)
 
         self._status_label = QLabel("待機中")
         root.addWidget(self._status_label)
@@ -107,14 +114,21 @@ class MainWindow(QMainWindow):
         self._append_log("INFO", f"{len(valid)} files dropped")
         language: str = self._lang_combo.currentData()
         model: str = self._model_combo.currentText()
-        self._start_processing(valid, language, model)
+        enable_diarization: bool = self._diarization_check.isChecked()
+        self._start_processing(valid, language, model, enable_diarization)
 
-    def _start_processing(self, files: list[Path], language: str, model: str) -> None:
+    def _start_processing(
+        self,
+        files: list[Path],
+        language: str,
+        model: str,
+        enable_diarization: bool,
+    ) -> None:
         self._processing = True
         self._progress_bar.setValue(0)
         self._progress_bar.setVisible(True)
         self._status_label.setText(f"{len(files)}件中 1件目を処理中")
-        self._worker = TranscriptionWorker(files, language, model)
+        self._worker = TranscriptionWorker(files, language, model, enable_diarization)
         self._worker.log_message.connect(self._append_log)
         self._worker.status_update.connect(self._status_label.setText)
         self._worker.progress.connect(self._on_progress)
@@ -140,3 +154,26 @@ class MainWindow(QMainWindow):
 
     def _append_log(self, level: str, message: str) -> None:
         self._log_view.append(f"[{level}] {message}")
+
+    def _apply_settings_to_ui(self) -> None:
+        for i in range(self._lang_combo.count()):
+            if self._lang_combo.itemData(i) == self._settings.language:
+                self._lang_combo.setCurrentIndex(i)
+                break
+        if self._settings.model in _MODELS:
+            self._model_combo.setCurrentText(self._settings.model)
+        self._diarization_check.setChecked(self._settings.enable_diarization)
+
+    def _connect_settings_persistence(self) -> None:
+        self._lang_combo.currentIndexChanged.connect(self._persist_settings)
+        self._model_combo.currentTextChanged.connect(self._persist_settings)
+        self._diarization_check.toggled.connect(self._persist_settings)
+
+    def _persist_settings(self, *_args: object) -> None:
+        self._settings.language = self._lang_combo.currentData() or self._settings.language
+        self._settings.model = self._model_combo.currentText()
+        self._settings.enable_diarization = self._diarization_check.isChecked()
+        try:
+            settings.save(self._settings)
+        except OSError as e:
+            self._append_log("WARN", f"設定の保存に失敗: {e}")

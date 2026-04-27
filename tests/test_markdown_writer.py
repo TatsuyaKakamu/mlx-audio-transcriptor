@@ -53,6 +53,43 @@ def test_build_markdown_empty_segments() -> None:
     assert "## Transcript" in md
 
 
+def test_build_markdown_with_speakers() -> None:
+    result = _make_result(
+        diarization_enabled=True,
+        segments=[
+            Segment(start_sec=0.0, end_sec=3.2, text="おはようございます。", speaker_id=1),
+            Segment(start_sec=3.2, end_sec=8.0, text="こちらこそ。", speaker_id=2),
+        ],
+    )
+    md = build_markdown(result)
+    assert "diarization: enabled" in md
+    assert "- [00:00.000 - 00:03.200] **Speaker 1**: おはようございます。" in md
+    assert "- [00:03.200 - 00:08.000] **Speaker 2**: こちらこそ。" in md
+
+
+def test_build_markdown_mixed_none_and_speaker() -> None:
+    result = _make_result(
+        diarization_enabled=True,
+        segments=[
+            Segment(start_sec=0.0, end_sec=1.0, text="不明", speaker_id=None),
+            Segment(start_sec=1.0, end_sec=2.0, text="既知", speaker_id=1),
+        ],
+    )
+    md = build_markdown(result)
+    assert "- [00:00.000 - 00:01.000] 不明" in md
+    assert "- [00:00.000 - 00:01.000] **Speaker" not in md
+    assert "- [00:01.000 - 00:02.000] **Speaker 1**: 既知" in md
+
+
+def test_build_markdown_no_diarization_omits_frontmatter_and_prefix() -> None:
+    result = _make_result(
+        segments=[Segment(start_sec=0.0, end_sec=1.0, text="テスト")],
+    )
+    md = build_markdown(result)
+    assert "diarization:" not in md
+    assert "**Speaker" not in md
+
+
 def test_write(tmp_path: Path) -> None:
     result = _make_result(
         source_path=tmp_path / "test.wav",

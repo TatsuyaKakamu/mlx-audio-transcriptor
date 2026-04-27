@@ -3,8 +3,8 @@ from app.models.types import Segment
 from app.services.segment_merger import merge_by_conversation
 
 
-def seg(start, end, text):
-    return Segment(start_sec=start, end_sec=end, text=text)
+def seg(start, end, text, speaker_id=None):
+    return Segment(start_sec=start, end_sec=end, text=text, speaker_id=speaker_id)
 
 
 def test_empty():
@@ -84,3 +84,41 @@ def test_question_mark_splits():
     ]
     result = merge_by_conversation(segs, silence_gap_sec=0.8, language="ja")
     assert len(result) == 2
+
+
+def test_merge_respects_speaker_boundary():
+    segs = [
+        seg(0.0, 1.0, "おはよう", speaker_id=1),
+        seg(1.1, 2.0, "ございます", speaker_id=1),
+        seg(2.1, 3.0, "こちらこそ", speaker_id=2),
+    ]
+    result = merge_by_conversation(
+        segs, silence_gap_sec=0.8, language="ja", respect_speaker=True
+    )
+    assert len(result) == 2
+    assert result[0].speaker_id == 1
+    assert result[0].text == "おはようございます"
+    assert result[1].speaker_id == 2
+    assert result[1].text == "こちらこそ"
+
+
+def test_merge_speaker_disabled_unchanged():
+    segs = [
+        seg(0.0, 1.0, "おはよう", speaker_id=1),
+        seg(1.1, 2.0, "こちら", speaker_id=2),
+    ]
+    result = merge_by_conversation(segs, silence_gap_sec=0.8, language="ja")
+    assert len(result) == 1
+    assert result[0].text == "おはようこちら"
+
+
+def test_merge_propagates_speaker_id_when_no_split():
+    segs = [
+        seg(0.0, 1.0, "前半", speaker_id=3),
+        seg(1.1, 2.0, "後半", speaker_id=3),
+    ]
+    result = merge_by_conversation(
+        segs, silence_gap_sec=0.8, language="ja", respect_speaker=True
+    )
+    assert len(result) == 1
+    assert result[0].speaker_id == 3

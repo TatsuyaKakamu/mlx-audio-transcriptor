@@ -18,15 +18,20 @@ def build_markdown(result: TranscriptionResult) -> str:
         "---",
         f"language: {result.language}",
         f"model: {result.model}",
+    ]
+    if result.diarization_enabled:
+        lines.append("diarization: enabled")
+    lines.extend([
         "---",
         "",
         "## Transcript",
         "",
-    ]
+    ])
     for seg in result.segments:
         start = format_time(seg.start_sec)
         end = format_time(seg.end_sec)
-        lines.append(f"- [{start} - {end}] {seg.text}")
+        prefix = f"**Speaker {seg.speaker_id}**: " if seg.speaker_id is not None else ""
+        lines.append(f"- [{start} - {end}] {prefix}{seg.text}")
     return "\n".join(lines) + "\n"
 
 

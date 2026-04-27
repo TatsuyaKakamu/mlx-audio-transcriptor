@@ -2,12 +2,13 @@ import bisect
 from pathlib import Path
 
 import numpy as np
-import soundfile as sf
 
 _SAMPLE_RATE = 16_000
 
 
 def _load_audio(source_path: Path) -> np.ndarray:
+    import soundfile as sf
+
     data, sr = sf.read(str(source_path), dtype="float32", always_2d=True)
     mono = data.mean(axis=1)
     if sr != _SAMPLE_RATE:

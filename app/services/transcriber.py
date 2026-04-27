@@ -43,19 +43,24 @@ def transcribe(
     language: str,
     progress_callback: Callable[[int, int, float], None] | None = None,
     use_vad: bool = True,
+    enable_diarization: bool = False,
+    warning_callback: Callable[[str], None] | None = None,
 ) -> TranscriptionResult:
     repo = _MODEL_REPO_MAP.get(model, f"mlx-community/whisper-{model}-mlx")
 
     audio_input: str | object = str(source_path)
     kept_intervals = None
+    audio_pcm = None
 
     if use_vad:
         try:
             from app.services.vad import preprocess_with_vad
             audio_input, kept_intervals = preprocess_with_vad(source_path)
+            audio_pcm = audio_input
         except Exception:
             audio_input = str(source_path)
             kept_intervals = None
+            audio_pcm = None
 
     original_tqdm_cls = _tqdm_module.tqdm
     if progress_callback is not None:
@@ -76,13 +81,36 @@ def transcribe(
             _tqdm_module.tqdm = original_tqdm_cls
 
     segments = normalize_segments(result, kept_intervals)
+
+    diarization_ok = False
+    if enable_diarization:
+        try:
+            from app.services import diarization
+            from app.services.vad import _SAMPLE_RATE, _load_audio
+
+            pcm_for_diar = audio_pcm
+            kept_for_diar = kept_intervals
+            if pcm_for_diar is None:
+                pcm_for_diar = _load_audio(source_path)
+                kept_for_diar = None
+            intervals = diarization.diarize_pcm(pcm_for_diar, sample_rate=_SAMPLE_RATE)
+            segments = diarization.assign_speakers(segments, intervals, kept_for_diar)
+            segments = diarization.normalize_speaker_ids(segments)
+            diarization_ok = True
+        except Exception as e:
+            if warning_callback is not None:
+                warning_callback(f"話者識別に失敗したためスキップしました: {e}")
+
     from app.services.segment_merger import merge_by_conversation
-    segments = merge_by_conversation(segments, language=language)
+    segments = merge_by_conversation(
+        segments, language=language, respect_speaker=diarization_ok
+    )
     return TranscriptionResult(
         source_path=source_path,
         language=language,
         model=model,
         segments=segments,
+        diarization_enabled=diarization_ok,
     )
 
 
