@@ -81,9 +81,9 @@ _transcribe_one()
 
 `app/config.py` の `load_config()` が GUI / CLI 共通で TOML を読む。ファイルが無ければコード内デフォルトを使う。既知キー: `language`, `model`, `watch_dir`, `extensions`, `file_stability_seconds`, `trash_source_after_success`。GUI 起動時にこれを読んでコンボボックスの初期値を設定する。`install-watcher.sh` が未存在時に `config.toml.example` を自動コピーする。
 
-### 通知 (CLI のみ)
+### 通知
 
-`services/notifier.py` は `osascript` を `subprocess.run` で叩き、失敗は黙殺する。`services/progress.py` の `make_milestone_callback(filename)` は 25 / 50 / 75% を一度ずつ通知する。`transcriber.transcribe()` は `tqdm.tqdm` クラスを一時差し替えて `update()` フックから `(processed, total, elapsed)` をコールバックへ渡す。GUI 経路（`TranscriptionWorker`）は通知を出さない。
+`services/notifier.py` は `osascript` を `subprocess.run` で叩き、失敗は黙殺する。`services/progress.py` の `make_milestone_callback(filename)` は 25 / 50 / 75% を一度ずつ通知する。`transcriber.transcribe()` は `tqdm.tqdm` クラスを一時差し替えて `update()` フックから `(processed, total, elapsed)` をコールバックへ渡す。GUI 経路（`TranscriptionWorker`）は完了時のみ通知する（成功・失敗件数を含む）。CLI 経路は開始・進捗・完了の 3 段階で通知する。
 
 ### スレッド境界
 
@@ -91,7 +91,7 @@ _transcribe_one()
   - `log_message(level, message)` — ログペイン追記
   - `status_update(text)` — ステータス1行表示
   - `progress(float)` — プログレスバー 0–100%
-  - `finished(had_errors)` — 完了通知
+  - `finished(had_errors, success_count, failure_count)` — 完了通知
 - UI スレッドからワーカーへの直接呼び出しは禁止
 
 ### VAD（音声区間検出）
