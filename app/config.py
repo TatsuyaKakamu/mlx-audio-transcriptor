@@ -13,6 +13,16 @@ _DEFAULT_EXTENSIONS: frozenset[str] = frozenset({".wav", ".mp3"})
 
 
 @dataclass(frozen=True)
+class MinutesConfig:
+    enabled: bool = False
+    ollama_host: str = "http://localhost:11434"
+    model: str = "gemma3"
+    prompt_language: str = "ja"
+    max_input_chars: int = 60000
+    request_timeout_seconds: float = 180.0
+
+
+@dataclass(frozen=True)
 class AppConfig:
     language: str = "ja"
     model: str = "medium"
@@ -20,6 +30,21 @@ class AppConfig:
     extensions: frozenset[str] = _DEFAULT_EXTENSIONS
     file_stability_seconds: float = 3.0
     trash_source_after_success: bool = True
+    minutes: MinutesConfig = field(default_factory=MinutesConfig)
+
+
+def _parse_minutes(data: dict) -> MinutesConfig:
+    defaults = MinutesConfig()
+    return MinutesConfig(
+        enabled=bool(data.get("enabled", defaults.enabled)),
+        ollama_host=str(data.get("ollama_host", defaults.ollama_host)),
+        model=str(data.get("model", defaults.model)),
+        prompt_language=str(data.get("prompt_language", defaults.prompt_language)),
+        max_input_chars=int(data.get("max_input_chars", defaults.max_input_chars)),
+        request_timeout_seconds=float(
+            data.get("request_timeout_seconds", defaults.request_timeout_seconds)
+        ),
+    )
 
 
 def _parse(data: dict) -> AppConfig:
@@ -44,6 +69,9 @@ def _parse(data: dict) -> AppConfig:
     stability = float(data.get("file_stability_seconds", defaults.file_stability_seconds))
     trash = bool(data.get("trash_source_after_success", defaults.trash_source_after_success))
 
+    minutes_raw = data.get("minutes")
+    minutes = _parse_minutes(minutes_raw) if isinstance(minutes_raw, dict) else MinutesConfig()
+
     return AppConfig(
         language=language,
         model=model,
@@ -51,6 +79,7 @@ def _parse(data: dict) -> AppConfig:
         extensions=extensions,
         file_stability_seconds=stability,
         trash_source_after_success=trash,
+        minutes=minutes,
     )
 
 

@@ -10,7 +10,15 @@ from pathlib import Path
 import send2trash
 
 from app.config import AppConfig, load_config
-from app.services import file_naming, markdown_writer, notifier, progress, transcriber
+from app.services import (
+    file_naming,
+    markdown_writer,
+    minutes,
+    minutes_generator,
+    notifier,
+    progress,
+    transcriber,
+)
 
 logger = logging.getLogger("mlx_audio_transcriptor.cli")
 
@@ -65,6 +73,17 @@ def _transcribe_one(path: Path, cfg: AppConfig) -> None:
     markdown_writer.write(result, output_path)
     notifier.notify("文字起こし完了", f"{path.name} → {output_path.name}")
     logger.info("wrote markdown: %s", output_path)
+
+    if cfg.minutes.enabled:
+        minutes.run_for(
+            transcript_path=output_path,
+            audio_path=path,
+            transcript_text=minutes_generator.transcript_plain_text(result),
+            language=cfg.language,
+            whisper_model=cfg.model,
+            cfg=cfg.minutes,
+            notify=notifier.notify,
+        )
 
     if cfg.trash_source_after_success:
         try:

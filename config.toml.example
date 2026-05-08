@@ -27,3 +27,35 @@ file_stability_seconds = 3.0
 # false にすると元ファイルは残る（その場合、再スキャン時は *.transcript.md の
 # 有無で既処理判定される）
 trash_source_after_success = true
+
+# 議事録生成（Ollama 連携）
+#
+# 有効化すると、トランスクリプト書き出し直後にローカルの Ollama を呼び出して
+# 議事録 Markdown を生成し、`<元音声の日付(YYYY-MM-DD)>_<議題>.md` という
+# ファイル名でトランスクリプトと同じディレクトリに書き出す。
+# 失敗してもトランスクリプト本体には影響しない。
+#
+# 事前準備:
+#   1) `brew install ollama` などで Ollama をインストール
+#   2) `ollama serve` を起動
+#   3) `ollama pull gemma3` などで使うモデルを取得
+[minutes]
+# false の場合、Ollama 連携を一切行わない (default: false)
+enabled = false
+
+# Ollama のエンドポイント (default: "http://localhost:11434")
+ollama_host = "http://localhost:11434"
+
+# 利用するモデル名。`ollama list` で確認できるものを指定
+# 日本語の議事録生成には gemma3 / qwen3 系などを推奨
+model = "gemma3"
+
+# プロンプト言語 ("ja" / "en")。出力の見出しがこの言語になる
+prompt_language = "ja"
+
+# 1 リクエストで LLM に渡す書き起こしの最大文字数。
+# 超えた分は先頭から切り詰められ WARN ログが出る (default: 60000)
+max_input_chars = 60000
+
+# Ollama HTTP リクエストのタイムアウト秒 (default: 180.0)
+request_timeout_seconds = 180.0
